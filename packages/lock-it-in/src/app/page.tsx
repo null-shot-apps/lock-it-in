@@ -17,6 +17,70 @@ type TimerPreset = {
   description: string;
 };
 
+type Theme = {
+  name: string;
+  gradient: string;
+  card: string;
+  cardBorder: string;
+  primary: string;
+  primaryHover: string;
+  secondary: string;
+  text: string;
+  textSecondary: string;
+  accent: string;
+};
+
+const themes: Record<string, Theme> = {
+  zen: {
+    name: 'Zen Neutrals',
+    gradient: 'from-stone-100 via-amber-50 to-stone-100',
+    card: 'bg-white/80',
+    cardBorder: 'border-stone-200',
+    primary: 'bg-stone-700 hover:bg-stone-800',
+    primaryHover: 'hover:bg-stone-100',
+    secondary: 'bg-stone-200 hover:bg-stone-300',
+    text: 'text-stone-900',
+    textSecondary: 'text-stone-600',
+    accent: 'bg-amber-100',
+  },
+  forest: {
+    name: 'Forest Calm',
+    gradient: 'from-emerald-50 via-green-50 to-teal-50',
+    card: 'bg-white/80',
+    cardBorder: 'border-emerald-200',
+    primary: 'bg-emerald-700 hover:bg-emerald-800',
+    primaryHover: 'hover:bg-emerald-100',
+    secondary: 'bg-emerald-200 hover:bg-emerald-300',
+    text: 'text-emerald-950',
+    textSecondary: 'text-emerald-700',
+    accent: 'bg-green-100',
+  },
+  sunrise: {
+    name: 'Sunrise Focus',
+    gradient: 'from-orange-50 via-pink-50 to-rose-50',
+    card: 'bg-white/80',
+    cardBorder: 'border-orange-200',
+    primary: 'bg-orange-600 hover:bg-orange-700',
+    primaryHover: 'hover:bg-orange-100',
+    secondary: 'bg-orange-200 hover:bg-orange-300',
+    text: 'text-orange-950',
+    textSecondary: 'text-orange-700',
+    accent: 'bg-pink-100',
+  },
+  midnight: {
+    name: 'Midnight Flow',
+    gradient: 'from-slate-900 via-purple-900 to-slate-900',
+    card: 'bg-white/10',
+    cardBorder: 'border-white/20',
+    primary: 'bg-purple-600 hover:bg-purple-700',
+    primaryHover: 'hover:bg-white/20',
+    secondary: 'bg-slate-600 hover:bg-slate-700',
+    text: 'text-white',
+    textSecondary: 'text-purple-200',
+    accent: 'bg-purple-900/30',
+  },
+};
+
 const presets: TimerPreset[] = [
   { name: 'Short Focus', work: 25, break: 5, description: 'Classic Pomodoro' },
   { name: 'Medium Focus', work: 45, break: 10, description: 'Extended session' },
@@ -46,12 +110,21 @@ export default function PomodoroApp() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [newGoalName, setNewGoalName] = useState('');
   const [selectedColor, setSelectedColor] = useState(goalColors[0]);
+  
+  const [currentTheme, setCurrentTheme] = useState<keyof typeof themes>('midnight');
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
 
-  // Load goals from localStorage
+  const theme = themes[currentTheme];
+
+  // Load goals and theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('pomodoro-goals');
     if (saved) {
       setGoals(JSON.parse(saved));
+    }
+    const savedTheme = localStorage.getItem('pomodoro-theme');
+    if (savedTheme && savedTheme in themes) {
+      setCurrentTheme(savedTheme as keyof typeof themes);
     }
   }, []);
 
@@ -61,6 +134,11 @@ export default function PomodoroApp() {
       localStorage.setItem('pomodoro-goals', JSON.stringify(goals));
     }
   }, [goals]);
+
+  // Save theme to localStorage
+  useEffect(() => {
+    localStorage.setItem('pomodoro-theme', currentTheme);
+  }, [currentTheme]);
 
   // Timer logic
   useEffect(() => {
@@ -140,27 +218,65 @@ export default function PomodoroApp() {
   const currentGoal = goals.find((g) => g.id === selectedGoal);
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-auto bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Subtle animated background */}
-      <div className="absolute inset-0 bg-aurora-layer-1 opacity-30" />
+    <div className={`relative min-h-[100dvh] w-full overflow-auto bg-gradient-to-br ${theme.gradient} transition-all duration-700`}>
+      {/* Subtle animated background for midnight theme */}
+      {currentTheme === 'midnight' && <div className="absolute inset-0 bg-aurora-layer-1 opacity-30" />}
       
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <header className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Lock It In</h1>
-          <p className="text-purple-200">Focus on what matters. Track your progress.</p>
+        <header className="text-center mb-8">
+          <h1 className={`text-4xl md:text-5xl font-bold ${theme.text} mb-2`}>Lock It In</h1>
+          <p className={theme.textSecondary}>Focus on what matters. Track your progress.</p>
         </header>
+
+        {/* Theme Selector */}
+        <div className="flex justify-center mb-8">
+          <div className="relative">
+            <button
+              onClick={() => setShowThemeSelector(!showThemeSelector)}
+              className={`px-6 py-3 ${theme.card} backdrop-blur-lg rounded-full border ${theme.cardBorder} ${theme.text} font-medium transition-all ${theme.primaryHover} flex items-center gap-2`}
+            >
+              <span>🎨</span>
+              <span>{theme.name}</span>
+              <span className="text-xs">{showThemeSelector ? '▲' : '▼'}</span>
+            </button>
+            
+            {showThemeSelector && (
+              <div className={`absolute top-full mt-2 left-1/2 -translate-x-1/2 ${theme.card} backdrop-blur-lg rounded-2xl border ${theme.cardBorder} p-4 shadow-2xl min-w-[280px] z-50`}>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(themes).map(([key, t]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setCurrentTheme(key as keyof typeof themes);
+                        setShowThemeSelector(false);
+                      }}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        currentTheme === key
+                          ? 'border-current scale-105'
+                          : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <div className={`w-full h-12 rounded-lg bg-gradient-to-br ${t.gradient} mb-2`} />
+                      <div className={`text-sm font-medium ${theme.text}`}>{t.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Left Column - Timer */}
           <div className="space-y-6">
             {/* Timer Display */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+            <div className={`${theme.card} backdrop-blur-lg rounded-2xl p-8 border ${theme.cardBorder} transition-all duration-500`}>
               <div className="text-center mb-6">
-                <div className="text-7xl font-bold text-white mb-2">
+                <div className={`text-7xl font-bold ${theme.text} mb-2`}>
                   {formatTime(timeLeft)}
                 </div>
-                <div className="text-purple-200 text-lg">
+                <div className={`${theme.textSecondary} text-lg`}>
                   {isBreak ? '☕ Break Time' : currentGoal ? `🎯 ${currentGoal.name}` : 'Select a goal to start'}
                 </div>
               </div>
@@ -171,21 +287,21 @@ export default function PomodoroApp() {
                   <button
                     onClick={startTimer}
                     disabled={!selectedGoal && !isBreak}
-                    className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                    className={`px-8 py-3 ${theme.primary} disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all`}
                   >
                     {timeLeft === 0 ? 'Start' : 'Resume'}
                   </button>
                 ) : (
                   <button
                     onClick={pauseTimer}
-                    className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors"
+                    className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-all"
                   >
                     Pause
                   </button>
                 )}
                 <button
                   onClick={resetTimer}
-                  className="px-8 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors"
+                  className={`px-8 py-3 ${theme.secondary} text-white rounded-lg font-semibold transition-all`}
                 >
                   Reset
                 </button>
@@ -203,10 +319,10 @@ export default function PomodoroApp() {
                           setIsCustom(false);
                           setTimeLeft(0);
                         }}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                           !isCustom && selectedPreset === idx
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                            ? `${theme.primary.replace('hover:', '')} text-white`
+                            : `${theme.accent} ${theme.text} ${theme.primaryHover}`
                         }`}
                       >
                         <div className="text-sm">{preset.name}</div>
@@ -218,10 +334,10 @@ export default function PomodoroApp() {
                   {/* Custom Timer */}
                   <button
                     onClick={() => setIsCustom(!isCustom)}
-                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`w-full px-4 py-2 rounded-lg font-medium transition-all ${
                       isCustom
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white/10 text-purple-200 hover:bg-white/20'
+                        ? `${theme.primary.replace('hover:', '')} text-white`
+                        : `${theme.accent} ${theme.text} ${theme.primaryHover}`
                     }`}
                   >
                     Custom Timer
@@ -230,7 +346,7 @@ export default function PomodoroApp() {
                   {isCustom && (
                     <div className="grid grid-cols-2 gap-3 pt-2">
                       <div>
-                        <label className="block text-purple-200 text-sm mb-1">Work (min)</label>
+                        <label className={`block ${theme.textSecondary} text-sm mb-1`}>Work (min)</label>
                         <input
                           type="number"
                           value={customWork}
@@ -238,17 +354,17 @@ export default function PomodoroApp() {
                             setCustomWork(Math.max(1, parseInt(e.target.value) || 1));
                             setTimeLeft(0);
                           }}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                          className={`w-full px-3 py-2 ${theme.accent} border ${theme.cardBorder} rounded-lg ${theme.text}`}
                           min="1"
                         />
                       </div>
                       <div>
-                        <label className="block text-purple-200 text-sm mb-1">Break (min)</label>
+                        <label className={`block ${theme.textSecondary} text-sm mb-1`}>Break (min)</label>
                         <input
                           type="number"
                           value={customBreak}
                           onChange={(e) => setCustomBreak(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                          className={`w-full px-3 py-2 ${theme.accent} border ${theme.cardBorder} rounded-lg ${theme.text}`}
                           min="1"
                         />
                       </div>
@@ -262,12 +378,12 @@ export default function PomodoroApp() {
           {/* Right Column - Goals */}
           <div className="space-y-6">
             {/* Goals List */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+            <div className={`${theme.card} backdrop-blur-lg rounded-2xl p-6 border ${theme.cardBorder} transition-all duration-500`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">Your Goals</h2>
+                <h2 className={`text-2xl font-bold ${theme.text}`}>Your Goals</h2>
                 <button
                   onClick={() => setShowGoalForm(!showGoalForm)}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                  className={`px-4 py-2 ${theme.primary} text-white rounded-lg font-semibold transition-all`}
                 >
                   + Add Goal
                 </button>
@@ -275,13 +391,13 @@ export default function PomodoroApp() {
 
               {/* Add Goal Form */}
               {showGoalForm && (
-                <div className="mb-4 p-4 bg-white/5 rounded-lg space-y-3">
+                <div className={`mb-4 p-4 ${theme.accent} rounded-lg space-y-3`}>
                   <input
                     type="text"
                     value={newGoalName}
                     onChange={(e) => setNewGoalName(e.target.value)}
                     placeholder="Goal name (e.g., Health, Career)"
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-purple-300"
+                    className={`w-full px-4 py-2 ${theme.accent} border ${theme.cardBorder} rounded-lg ${theme.text} placeholder-opacity-50`}
                     onKeyDown={(e) => e.key === 'Enter' && addGoal()}
                   />
                   <div className="flex gap-2">
@@ -290,7 +406,7 @@ export default function PomodoroApp() {
                         key={color}
                         onClick={() => setSelectedColor(color)}
                         className={`w-8 h-8 rounded-full transition-transform ${
-                          selectedColor === color ? 'scale-125 ring-2 ring-white' : ''
+                          selectedColor === color ? `scale-125 ring-2 ${currentTheme === 'midnight' ? 'ring-white' : 'ring-gray-800'}` : ''
                         }`}
                         style={{ backgroundColor: color }}
                       />
@@ -299,7 +415,7 @@ export default function PomodoroApp() {
                   <div className="flex gap-2">
                     <button
                       onClick={addGoal}
-                      className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                      className={`flex-1 px-4 py-2 ${theme.primary} text-white rounded-lg font-semibold transition-all`}
                     >
                       Create Goal
                     </button>
@@ -308,7 +424,7 @@ export default function PomodoroApp() {
                         setShowGoalForm(false);
                         setNewGoalName('');
                       }}
-                      className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors"
+                      className={`px-4 py-2 ${theme.secondary} text-white rounded-lg font-semibold transition-all`}
                     >
                       Cancel
                     </button>
@@ -319,7 +435,7 @@ export default function PomodoroApp() {
               {/* Goals */}
               <div className="space-y-3 max-h-[500px] overflow-y-auto">
                 {goals.length === 0 ? (
-                  <div className="text-center py-8 text-purple-200">
+                  <div className={`text-center py-8 ${theme.textSecondary}`}>
                     <p className="mb-2">No goals yet!</p>
                     <p className="text-sm opacity-75">Create your first New Year goal to get started.</p>
                   </div>
@@ -331,9 +447,9 @@ export default function PomodoroApp() {
                       disabled={isRunning}
                       className={`w-full p-4 rounded-lg text-left transition-all ${
                         selectedGoal === goal.id
-                          ? 'bg-white/20 ring-2 ring-white'
-                          : 'bg-white/5 hover:bg-white/10'
-                      } ${isRunning ? 'cursor-not-allowed opacity-50' : ''}`}
+                          ? `${theme.accent} ring-2 ${currentTheme === 'midnight' ? 'ring-white' : 'ring-gray-800'}`
+                          : `${theme.accent} opacity-60 ${theme.primaryHover}`
+                      } ${isRunning ? 'cursor-not-allowed opacity-30' : ''}`}
                     >
                       <div className="flex items-start gap-3">
                         <div
@@ -341,8 +457,8 @@ export default function PomodoroApp() {
                           style={{ backgroundColor: goal.color }}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white mb-1">{goal.name}</div>
-                          <div className="text-sm text-purple-200">
+                          <div className={`font-semibold ${theme.text} mb-1`}>{goal.name}</div>
+                          <div className={`text-sm ${theme.textSecondary}`}>
                             🍅 {goal.pomodoros} sessions · ⏱️ {Math.floor(goal.totalMinutes / 60)}h {goal.totalMinutes % 60}m
                           </div>
                         </div>
@@ -358,4 +474,15 @@ export default function PomodoroApp() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
 
