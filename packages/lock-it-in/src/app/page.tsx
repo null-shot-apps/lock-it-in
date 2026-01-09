@@ -12,6 +12,11 @@ type Goal = {
   monthlyPomodoros?: number;
 };
 
+type UnlinkedStats = {
+  pomodoros: number;
+  totalMinutes: number;
+};
+
 type Reflection = {
   id: string;
   goalId: string;
@@ -110,6 +115,7 @@ const goalColors = [
 export default function PomodoroApp() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
+  const [unlinkedStats, setUnlinkedStats] = useState<UnlinkedStats>({ pomodoros: 0, totalMinutes: 0 });
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [customWork, setCustomWork] = useState(25);
   const [customBreak, setCustomBreak] = useState(5);
@@ -135,7 +141,7 @@ export default function PomodoroApp() {
 
   const theme = themes[currentTheme];
 
-  // Load goals, reflections, and theme from localStorage
+  // Load goals, reflections, unlinked stats, and theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('pomodoro-goals');
     if (saved) {
@@ -144,6 +150,10 @@ export default function PomodoroApp() {
     const savedReflections = localStorage.getItem('pomodoro-reflections');
     if (savedReflections) {
       setReflections(JSON.parse(savedReflections));
+    }
+    const savedUnlinked = localStorage.getItem('pomodoro-unlinked');
+    if (savedUnlinked) {
+      setUnlinkedStats(JSON.parse(savedUnlinked));
     }
     const savedTheme = localStorage.getItem('pomodoro-theme');
     if (savedTheme && savedTheme in themes) {
@@ -165,6 +175,11 @@ export default function PomodoroApp() {
     }
   }, [reflections]);
 
+  // Save unlinked stats to localStorage
+  useEffect(() => {
+    localStorage.setItem('pomodoro-unlinked', JSON.stringify(unlinkedStats));
+  }, [unlinkedStats]);
+
   // Save theme to localStorage
   useEffect(() => {
     localStorage.setItem('pomodoro-theme', currentTheme);
@@ -178,19 +193,28 @@ export default function PomodoroApp() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           setIsRunning(false);
-          if (!isBreak && selectedGoal) {
-            // Update goal stats
+          if (!isBreak) {
             const workMinutes = isCustom ? customWork : presets[selectedPreset].work;
-            setGoals((prev) =>
-              prev.map((g) =>
-                g.id === selectedGoal
-                  ? { ...g, pomodoros: g.pomodoros + 1, totalMinutes: g.totalMinutes + workMinutes }
-                  : g
-              )
-            );
-            // Show reflection prompt
-            setCompletedSessionMinutes(workMinutes);
-            setShowReflection(true);
+            
+            if (selectedGoal) {
+              // Update goal stats
+              setGoals((prev) =>
+                prev.map((g) =>
+                  g.id === selectedGoal
+                    ? { ...g, pomodoros: g.pomodoros + 1, totalMinutes: g.totalMinutes + workMinutes }
+                    : g
+                )
+              );
+              // Show reflection prompt
+              setCompletedSessionMinutes(workMinutes);
+              setShowReflection(true);
+            } else {
+              // Update unlinked stats
+              setUnlinkedStats(prev => ({
+                pomodoros: prev.pomodoros + 1,
+                totalMinutes: prev.totalMinutes + workMinutes
+              }));
+            }
           }
           // Auto-start break
           if (!isBreak) {
@@ -224,7 +248,6 @@ export default function PomodoroApp() {
   };
 
   const startTimer = () => {
-    if (!selectedGoal && !isBreak) return;
     if (timeLeft === 0) {
       const minutes = isCustom ? customWork : presets[selectedPreset].work;
       setTimeLeft(minutes * 60);
@@ -249,7 +272,10 @@ export default function PomodoroApp() {
   };
 
   const saveReflection = () => {
-    if (!selectedGoal) return;
+    if (!selectedGoal) {
+      setShowReflection(false);
+      return;
+    }
     
     const newReflection: Reflection = {
       id: Date.now().toString(),
@@ -537,7 +563,7 @@ export default function PomodoroApp() {
                   {formatTime(timeLeft)}
                 </div>
                 <div className={`${theme.textSecondary} text-lg`}>
-                  {isBreak ? '☕ Break Time' : currentGoal ? `🎯 ${currentGoal.name}` : 'Select a goal to start'}
+                  {isBreak ? '☕ Break Time' : currentGoal ? `🎯 ${currentGoal.name}` : '🎯 Focus Session'}
                 </div>
               </div>
 
@@ -546,8 +572,7 @@ export default function PomodoroApp() {
                 {!isRunning ? (
                   <button
                     onClick={startTimer}
-                    disabled={!selectedGoal && !isBreak}
-                    className={`px-8 py-3 ${theme.primary} disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all`}
+                    className={`px-8 py-3 ${theme.primary} text-white rounded-lg font-semibold transition-all`}
                   >
                     {timeLeft === 0 ? 'Start' : 'Resume'}
                   </button>
@@ -692,12 +717,22 @@ export default function PomodoroApp() {
                 </div>
               )}
 
+              {/* Unlinked Sessions Stats */}
+              {unlinkedStats.pomodoros > 0 && (
+                <div className={`mb-4 p-4 ${theme.accent} rounded-lg`}>
+                  <div className={`font-semibold ${theme.text} mb-1`}>📊 Unlinked Sessions</div>
+                  <div className={`text-sm ${theme.textSecondary}`}>
+                    🍅 {unlinkedStats.pomodoros} sessions · ⏱️ {Math.floor(unlinkedStats.totalMinutes / 60)}h {unlinkedStats.totalMinutes % 60}m
+                  </div>
+                </div>
+              )}
+
               {/* Goals */}
               <div className="space-y-3 max-h-[500px] overflow-y-auto">
                 {goals.length === 0 ? (
                   <div className={`text-center py-8 ${theme.textSecondary}`}>
                     <p className="mb-2">No goals yet!</p>
-                    <p className="text-sm opacity-75">Create your first New Year goal to get started.</p>
+                    <p className="text-sm opacity-75">You can start a session without a goal, or create one to track progress.</p>
                   </div>
                 ) : (
                   goals.map((goal) => {
@@ -755,6 +790,7 @@ export default function PomodoroApp() {
     </div>
   );
 }
+
 
 
 
