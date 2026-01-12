@@ -138,6 +138,7 @@ export default function PomodoroApp() {
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [completedSessionMinutes, setCompletedSessionMinutes] = useState(0);
   const [showWeeklyView, setShowWeeklyView] = useState(false);
+  const [floatingWidget, setFloatingWidget] = useState(false);
 
   const theme = themes[currentTheme];
 
@@ -335,7 +336,55 @@ export default function PomodoroApp() {
   const monthlyStats = getMonthlyStats();
 
   return (
-    <div className={`relative min-h-[100dvh] w-full overflow-auto bg-gradient-to-br ${theme.gradient} transition-all duration-700`}>
+    <>
+      {/* Floating Widget */}
+      {floatingWidget && isRunning && (
+        <div className="fixed top-4 right-4 z-[9999] animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className={`${theme.card} backdrop-blur-xl rounded-2xl p-4 border ${theme.cardBorder} shadow-2xl min-w-[200px]`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className={`text-xs font-medium ${theme.textSecondary}`}>
+                {isBreak ? '☕ Break' : '🎯 Focus'}
+              </div>
+              <button
+                onClick={() => setFloatingWidget(false)}
+                className={`text-xs ${theme.textSecondary} hover:${theme.text} transition-colors`}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={`text-3xl font-bold ${theme.text} mb-1 text-center`}>
+              {formatTime(timeLeft)}
+            </div>
+            {currentGoal && (
+              <div className="flex items-center gap-2 justify-center">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: currentGoal.color }}
+                />
+                <div className={`text-xs ${theme.textSecondary} truncate max-w-[140px]`}>
+                  {currentGoal.name}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={pauseTimer}
+                className={`flex-1 px-3 py-1.5 text-xs ${theme.secondary} text-white rounded-lg font-medium transition-all`}
+              >
+                Pause
+              </button>
+              <button
+                onClick={resetTimer}
+                className={`flex-1 px-3 py-1.5 text-xs ${theme.secondary} text-white rounded-lg font-medium transition-all`}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`relative min-h-[100dvh] w-full overflow-auto bg-gradient-to-br ${theme.gradient} transition-all duration-700`}>
       {/* Subtle animated background for midnight theme */}
       {currentTheme === 'midnight' && <div className="absolute inset-0 bg-aurora-layer-1 opacity-30" />}
       
@@ -567,6 +616,19 @@ export default function PomodoroApp() {
                 </div>
               </div>
 
+              {/* Floating Widget Toggle */}
+              {isRunning && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={() => setFloatingWidget(!floatingWidget)}
+                    className={`px-4 py-2 text-sm ${theme.accent} ${theme.text} rounded-lg font-medium transition-all ${theme.primaryHover} flex items-center gap-2`}
+                  >
+                    <span>{floatingWidget ? '📌' : '📍'}</span>
+                    <span>{floatingWidget ? 'Widget Active' : 'Enable Floating Widget'}</span>
+                  </button>
+                </div>
+              )}
+
               {/* Timer Controls */}
               <div className="flex gap-3 justify-center mb-6">
                 {!isRunning ? (
@@ -788,8 +850,10 @@ export default function PomodoroApp() {
         </div>
       </div>
     </div>
+    </>
   );
 }
+
 
 
 
